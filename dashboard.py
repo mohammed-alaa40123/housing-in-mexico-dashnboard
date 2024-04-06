@@ -1,7 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import plotly.express as px
-from df import df
+from df import *
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
 st.title("Housing in mexico Dashboard")
@@ -84,7 +84,25 @@ for selected_state in selected_states:
     st.plotly_chart(scatter_fig)
 
 # Correlation Coefficients
-homes_by_state = filtered_data["state"].value_counts().sort_values()
+import plotly.express as px
+
+# Count homes by state
+homes_by_state = filtered_data["state"].value_counts().sort_values(ascending=False)
+
+# Limit to top 5 states
+top_5_states = homes_by_state.head(5)
+
+# Combine the rest into "Others"
+other_states_count = homes_by_state.iloc[5:].sum()
+
+# Create a DataFrame with top 5 states and "Others"
+pie_data = pd.DataFrame({"state": top_5_states.index.tolist() + ["Others"], 
+                         "count": top_5_states.values.tolist() + [other_states_count]})
+
+# Create a pie chart using Plotly Express
+fig = px.pie(pie_data, names="state", values="count", title="Homes by State (Top 5 + Others)")
+st.plotly_chart(fig)
+
 
 show_corr = st.checkbox("Show Correlation Coefficients")
 south_states_corr = {}
@@ -92,6 +110,7 @@ for state, data in homes_by_state.items():
     state_data = filtered_data[filtered_data["state"] == state]
     correlation = state_data["area_m2"].corr(state_data["price_usd"])
     south_states_corr[state] = correlation
+    
 if show_corr:
     st.write("Correlation Coefficients:")
     # south_states_corr = filtered_data.groupby("state").head()
