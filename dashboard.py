@@ -9,7 +9,7 @@ map_fig = px.scatter_mapbox(
     df,
     lat="lat",
     lon="lon",
-    # center={"lat": -14.2, "lon": -51.9},  # Map will be centered on Brazil
+    center={"lat": -23.19, "lon": -47.17},  # Map will be centered on Brazil
     width=600,
     height=600,
     color="region",
