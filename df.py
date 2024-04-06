@@ -1,5 +1,7 @@
 # Preparing data
 import pandas as pd
+import plotly.express as px
+import streamlit as st
 
 # Loading Data
 df1 = pd.read_csv("data/brasil-real-estate-1.csv")

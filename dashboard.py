@@ -1,22 +1,8 @@
-import streamlit as st
-import matplotlib.pyplot as plt
-import plotly.express as px
 from df import *
-
+from figures import *
 st.set_option('deprecation.showPyplotGlobalUse', False)
 st.title("Housing in mexico Dashboard")
-map_fig = px.scatter_mapbox(
-    df,
-    lat="lat",
-    lon="lon",
-    center={"lat": -23.19, "lon": -47.17},  # Map will be centered on Brazil
-    width=600,
-    height=600,
-    color="region",
-    hover_data=["price_usd"],  # Display price when hovering mouse over house
-)
 
-map_fig.update_layout(mapbox_style="open-street-map")
 st.plotly_chart(map_fig)
 
 # Sidebar Title
@@ -30,20 +16,22 @@ states_in_selected_regions = df[df["region"].isin(selected_regions)]["state"].un
 selected_states = st.sidebar.multiselect("Select State(s):", states_in_selected_regions, default=states_in_selected_regions)
 
 # Area Filter
-min_area = st.sidebar.slider("Minimum Area (sq meters):", min_value=df["area_m2"].min(), max_value=df["area_m2"].max(), value=df["area_m2"].min())
-max_area = st.sidebar.slider("Maximum Area (sq meters):", min_value=min_area, max_value=df["area_m2"].max(), value=df["area_m2"].max())
+min_value = df["area_m2"].min()
+max_value = df["area_m2"].max()
+area = st.sidebar.slider("Minimum Area (sq meters):", min_value=min_value, max_value=max_value, value=[min_value,max_value])
 
 # Price Filter
-min_price = st.sidebar.slider("Minimum Price (USD):", min_value=df["price_usd"].min(), max_value=df["price_usd"].max(), value=df["price_usd"].min())
-max_price = st.sidebar.slider("Maximum Price (USD):", min_value=min_price, max_value=df["price_usd"].max(), value=df["price_usd"].max())
+min_value = df["price_usd"].min()
+max_value = df["price_usd"].max()
+price = st.sidebar.slider("Minimum Price (USD):", min_value=min_value, max_value=max_value, value=[min_value,max_value])
 
 # Apply Filters
 filtered_data = df[(df["region"].isin(selected_regions)) &
                    (df["state"].isin(selected_states)) &
-                   (df["area_m2"] >= min_area) &
-                   (df["area_m2"] <= max_area) &
-                   (df["price_usd"] >= min_price) &
-                   (df["price_usd"] <= max_price)]
+                   (df["area_m2"] >= area[0]) &
+                   (df["area_m2"] <= area[1]) &
+                   (df["price_usd"] >= price[0]) &
+                   (df["price_usd"] <= price[1])]
 
 # Display Filtered Data
 st.write("Filtered Data:")
@@ -51,67 +39,12 @@ st.write(filtered_data)
 
 # Display Figures
 st.subheader("Exploratory Data Analysis")
+show_figures(filtered_data)
 
-# Distribution of Home Prices
-st.write("Distribution of Home Prices")
-plt.hist(filtered_data["price_usd"])
-plt.xlabel("Price [USD]")
-plt.ylabel("Frequency")
-st.pyplot()
-
-# Distribution of Home Sizes
-st.write("Distribution of Home Sizes")
-plt.boxplot(filtered_data["area_m2"])
-plt.xlabel("Area [sq meters]")
-st.pyplot()
-
-# Mean Home Price by Region
-st.write("Mean Home Price by Region")
-mean_price_by_region = filtered_data.groupby("region")["price_usd"].mean()
-mean_price_by_region.plot(kind="bar", xlabel="Region", ylabel="Mean Price [USD]")
-st.pyplot()
-
-# Multiselect dropdown to select states
-selected_states = st.multiselect("Select States:", df["state"].unique())
-
-# Show scatter plots for selected states
-for selected_state in selected_states:
-    st.write(f"Price vs. Area for {selected_state}")
-    scatter_fig = px.scatter(filtered_data[filtered_data["state"] == selected_state], x="price_usd", y="area_m2", 
-                             title=f"{selected_state}: Price vs. Area", labels={"price_usd": "Price [USD]", "area_m2": "Area [sq meters]"},
-                             width=800, height=500)
-    scatter_fig.update_layout(showlegend=False)
-    st.plotly_chart(scatter_fig)
-
-# Correlation Coefficients
-import plotly.express as px
-
-# Count homes by state
-homes_by_state = filtered_data["state"].value_counts().sort_values(ascending=False)
-
-# Limit to top 5 states
-top_5_states = homes_by_state.head(5)
-
-# Combine the rest into "Others"
-other_states_count = homes_by_state.iloc[5:].sum()
-
-# Create a DataFrame with top 5 states and "Others"
-pie_data = pd.DataFrame({"state": top_5_states.index.tolist() + ["Others"], 
-                         "count": top_5_states.values.tolist() + [other_states_count]})
-
-# Create a pie chart using Plotly Express
-fig = px.pie(pie_data, names="state", values="count", title="Homes by State (Top 5 + Others)")
-st.plotly_chart(fig)
-
-
+# Display correlation coeffecients
 show_corr = st.checkbox("Show Correlation Coefficients")
-south_states_corr = {}
-for state, data in homes_by_state.items():
-    state_data = filtered_data[filtered_data["state"] == state]
-    correlation = state_data["area_m2"].corr(state_data["price_usd"])
-    south_states_corr[state] = correlation
-    
+
+south_states_corr = calculate_correlation(filtered_data)
 if show_corr:
     st.write("Correlation Coefficients:")
-    # south_states_corr = filtered_data.groupby("state").head()
     st.write(south_states_corr)
